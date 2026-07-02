@@ -1,1 +1,422 @@
-.
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tic Tac Toe</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0a0a1a;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    height: 100vh; font-family: 'Georgia', serif; overflow: hidden;
+  }
+  .bg-symbols { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+  .bg-sym {
+    position: absolute; font-size: 2rem; opacity: 0.06;
+    animation: floatSym linear infinite; color: white;
+  }
+  @keyframes floatSym {
+    from { transform: translateY(110vh) rotate(0deg); }
+    to   { transform: translateY(-10vh) rotate(360deg); }
+  }
+
+  #startScreen {
+    position: fixed; inset: 0; background: #0a0a1a;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    z-index: 100; gap: 16px;
+  }
+  .game-title { font-size: 2.2rem; color: white; letter-spacing: 4px; text-align: center; }
+  .game-title span:first-child { color: #00d4ff; }
+  .game-title span:last-child  { color: #ff4444; }
+  .subtitle { color: #ffffff55; font-size: 0.85rem; letter-spacing: 3px; }
+  .symbol-preview { display: flex; gap: 30px; align-items: center; margin: 4px 0; }
+  .preview-o { width: 55px; height: 55px; border-radius: 50%; border: 5px solid #00d4ff; box-shadow: 0 0 16px #00d4ff88; }
+  .preview-vs { color: #ffffff66; font-size: 1.1rem; letter-spacing: 2px; }
+  .preview-x { font-size: 2.8rem; color: #ff4444; font-weight: bold; text-shadow: 0 0 16px #ff444488; line-height: 1; }
+
+  .section-label { color: #ffffff55; font-size: 0.72rem; letter-spacing: 3px; }
+  .mode-buttons { display: flex; gap: 14px; }
+  .mode-btn {
+    background: transparent; border: 2px solid #ffffff33;
+    color: #ffffff88; font-size: 0.78rem; letter-spacing: 2px;
+    padding: 11px 20px; border-radius: 8px; cursor: pointer;
+    transition: all 0.3s; text-align: center; line-height: 1.6;
+  }
+  .mode-btn:hover { background: #ffffff11; border-color: #ffffff66; color: white; }
+  .mode-btn.selected { border-color: #00d4ff; color: #00d4ff; box-shadow: 0 0 14px #00d4ff44; background: #00d4ff11; }
+  .mode-btn .mode-icon { font-size: 1.4rem; display: block; margin-bottom: 4px; }
+
+  /* Difficulty */
+  #diffSection { display: flex; flex-direction: column; align-items: center; gap: 8px; opacity: 0.2; pointer-events: none; transition: opacity 0.3s; }
+  #diffSection.active { opacity: 1; pointer-events: all; }
+  .diff-buttons { display: flex; gap: 10px; }
+  .diff-btn {
+    background: transparent; border: 2px solid #ffffff22;
+    color: #ffffff55; font-size: 0.7rem; letter-spacing: 2px;
+    padding: 8px 14px; border-radius: 8px; cursor: pointer;
+    transition: all 0.3s; text-align: center; line-height: 1.6;
+  }
+  .diff-btn .diff-icon { font-size: 1.1rem; display: block; margin-bottom: 3px; }
+  .diff-btn:hover { background: #ffffff11; border-color: #ffffff44; color: white; }
+  .diff-btn.sel-easy   { border-color: #00ff88; color: #00ff88; box-shadow: 0 0 10px #00ff8844; background: #00ff8811; }
+  .diff-btn.sel-medium { border-color: #ffcc00; color: #ffcc00; box-shadow: 0 0 10px #ffcc0044; background: #ffcc0011; }
+  .diff-btn.sel-hard   { border-color: #ff4444; color: #ff4444; box-shadow: 0 0 10px #ff444444; background: #ff444411; }
+
+  .play-btn {
+    background: transparent; border: 2px solid #00d4ff;
+    color: #00d4ff; font-size: 1rem; letter-spacing: 4px;
+    padding: 12px 40px; border-radius: 4px; cursor: pointer;
+    transition: all 0.3s; box-shadow: 0 0 12px #00d4ff33; margin-top: 4px;
+  }
+  .play-btn:hover { background: #00d4ff22; box-shadow: 0 0 24px #00d4ff66; transform: scale(1.05); }
+
+  /* Game Screen */
+  #gameScreen { display: none; flex-direction: column; align-items: center; gap: 12px; z-index: 1; }
+  .turn-text { font-size: 0.95rem; letter-spacing: 3px; color: #ffffff88; }
+  .turn-o { color: #00d4ff; text-shadow: 0 0 10px #00d4ff; font-weight: bold; }
+  .turn-x { color: #ff4444; text-shadow: 0 0 10px #ff4444; font-weight: bold; }
+
+  .board {
+    display: grid;
+    grid-template-columns: repeat(3, 100px);
+    grid-template-rows: repeat(3, 100px);
+    gap: 8px;
+  }
+  .cell {
+    width: 100px; height: 100px;
+    background: #ffffff08; border: 2px solid #ffffff15;
+    border-radius: 12px; display: flex; align-items: center;
+    justify-content: center; cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+  }
+  .cell:hover { background: #ffffff12; border-color: #ffffff33; }
+  .cell.taken { cursor: not-allowed; }
+  .cell.win { background: #ffffff18; border-color: #ffcc00; box-shadow: 0 0 16px #ffcc0055; }
+
+  .sym-o { width: 52px; height: 52px; border-radius: 50%; border: 5px solid #00d4ff; box-shadow: 0 0 14px #00d4ff88; animation: popIn 0.3s ease; }
+  .sym-x { font-size: 3rem; color: #ff4444; font-weight: bold; text-shadow: 0 0 14px #ff444488; line-height: 1; animation: popIn 0.3s ease; }
+  @keyframes popIn { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+  #result { font-size: 1.2rem; letter-spacing: 3px; min-height: 2rem; text-align: center; }
+
+  .bottom-btns { display: flex; gap: 12px; }
+  .restart-btn {
+    background: transparent; border: 1px solid #ffffff33;
+    color: #ffffff66; font-size: 0.7rem; letter-spacing: 3px;
+    padding: 9px 22px; border-radius: 4px; cursor: pointer; transition: all 0.2s;
+  }
+  .restart-btn:hover { border-color: #ffffff88; color: white; }
+  .menu-btn {
+    background: transparent; border: 1px solid #00d4ff33;
+    color: #00d4ff66; font-size: 0.7rem; letter-spacing: 3px;
+    padding: 9px 22px; border-radius: 4px; cursor: pointer; transition: all 0.2s;
+  }
+  .menu-btn:hover { border-color: #00d4ff; color: #00d4ff; }
+
+  .score { display: flex; gap: 24px; color: #ffffff44; font-size: 0.72rem; letter-spacing: 2px; }
+  .score-o { color: #00d4ff88; }
+  .score-x { color: #ff444488; }
+  .mode-tag { font-size: 0.62rem; letter-spacing: 2px; color: #ffffff33; margin-top: -4px; }
+  .diff-tag-easy   { color: #00ff8866; }
+  .diff-tag-medium { color: #ffcc0066; }
+  .diff-tag-hard   { color: #ff444466; }
+</style>
+</head>
+<body>
+
+<div class="bg-symbols" id="bgSyms"></div>
+
+<!-- Start Screen -->
+<div id="startScreen">
+  <div class="game-title"><span>TIC</span> · <span>TAC</span> · TOE</div>
+  <div class="subtitle">choose your mode</div>
+
+  <div class="symbol-preview">
+    <div class="preview-o"></div>
+    <div class="preview-vs">VS</div>
+    <div class="preview-x">✕</div>
+  </div>
+
+  <div class="section-label">SELECT MODE</div>
+  <div class="mode-buttons">
+    <div class="mode-btn selected" id="btn2P" onclick="selectMode('2p')">
+      <span class="mode-icon">👥</span>2 PLAYERS
+    </div>
+    <div class="mode-btn" id="btnBot" onclick="selectMode('bot')">
+      <span class="mode-icon">🤖</span>VS BOT
+    </div>
+  </div>
+
+  <!-- Difficulty (shown only when bot selected) -->
+  <div id="diffSection">
+    <div class="section-label">BOT DIFFICULTY</div>
+    <div class="diff-buttons">
+      <div class="diff-btn sel-easy" id="dEasy" onclick="selectDiff('easy')">
+        <span class="diff-icon">😊</span>EASY
+      </div>
+      <div class="diff-btn" id="dMedium" onclick="selectDiff('medium')">
+        <span class="diff-icon">😐</span>MEDIUM
+      </div>
+      <div class="diff-btn" id="dHard" onclick="selectDiff('hard')">
+        <span class="diff-icon">😈</span>HARD
+      </div>
+    </div>
+  </div>
+
+  <button class="play-btn" onclick="startGame()">▶ PLAY</button>
+</div>
+
+<!-- Game Screen -->
+<div id="gameScreen">
+  <div class="turn-text">Turn: <span id="turnLabel" class="turn-o">O</span></div>
+  <div class="mode-tag" id="modeTag"></div>
+
+  <div class="board" id="board">
+    <div class="cell" onclick="play(0)"></div>
+    <div class="cell" onclick="play(1)"></div>
+    <div class="cell" onclick="play(2)"></div>
+    <div class="cell" onclick="play(3)"></div>
+    <div class="cell" onclick="play(4)"></div>
+    <div class="cell" onclick="play(5)"></div>
+    <div class="cell" onclick="play(6)"></div>
+    <div class="cell" onclick="play(7)"></div>
+    <div class="cell" onclick="play(8)"></div>
+  </div>
+
+  <div id="result"></div>
+
+  <div class="score">
+    <span class="score-o">O: <span id="scoreO">0</span></span>
+    <span>DRAW: <span id="scoreDraw">0</span></span>
+    <span class="score-x">X: <span id="scoreX">0</span></span>
+  </div>
+
+  <div class="bottom-btns">
+    <button class="restart-btn" onclick="resetBoard()">RESTART</button>
+    <button class="menu-btn" onclick="goToMenu()">MENU</button>
+  </div>
+</div>
+
+<script>
+  // Background symbols
+  const bgSyms = document.getElementById('bgSyms');
+  for (let i = 0; i < 20; i++) {
+    const s = document.createElement('div');
+    s.className = 'bg-sym';
+    s.textContent = Math.random() > 0.5 ? 'O' : '✕';
+    s.style.left = Math.random() * 100 + '%';
+    s.style.animationDuration = (6 + Math.random() * 10) + 's';
+    s.style.animationDelay = (Math.random() * 8) + 's';
+    s.style.fontSize = (1.5 + Math.random() * 2) + 'rem';
+    bgSyms.appendChild(s);
+  }
+
+  let board = Array(9).fill(null);
+  let currentPlayer = 'O';
+  let gameOver = false;
+  let scores = { O: 0, X: 0, Draw: 0 };
+  let mode = '2p';
+  let difficulty = 'easy';
+  let botThinking = false;
+
+  const winCombos = [
+    [0,1,2],[3,4,5],[6,7,8],
+    [0,3,6],[1,4,7],[2,5,8],
+    [0,4,8],[2,4,6]
+  ];
+
+  function selectMode(m) {
+    mode = m;
+    document.getElementById('btn2P').classList.toggle('selected', m === '2p');
+    document.getElementById('btnBot').classList.toggle('selected', m === 'bot');
+    const ds = document.getElementById('diffSection'); m === 'bot' ? ds.classList.add('active') : ds.classList.remove('active');
+  }
+
+  function selectDiff(d) {
+    difficulty = d;
+    document.getElementById('dEasy').className   = 'diff-btn' + (d === 'easy'   ? ' sel-easy'   : '');
+    document.getElementById('dMedium').className = 'diff-btn' + (d === 'medium' ? ' sel-medium'  : '');
+    document.getElementById('dHard').className   = 'diff-btn' + (d === 'hard'   ? ' sel-hard'    : '');
+  }
+
+  function startGame() {
+    document.getElementById('startScreen').style.display = 'none';
+    document.getElementById('gameScreen').style.display = 'flex';
+
+    const tag = document.getElementById('modeTag');
+    if (mode === 'bot') {
+      const diffColors = { easy: 'diff-tag-easy', medium: 'diff-tag-medium', hard: 'diff-tag-hard' };
+      const diffEmoji  = { easy: '😊', medium: '😐', hard: '😈' };
+      tag.className = 'mode-tag ' + diffColors[difficulty];
+      tag.textContent = `VS BOT — ${diffEmoji[difficulty]} ${difficulty.toUpperCase()} — YOU ARE O`;
+    } else {
+      tag.className = 'mode-tag';
+      tag.textContent = '2 PLAYER MODE';
+    }
+    resetBoard();
+  }
+
+  function goToMenu() {
+    document.getElementById('startScreen').style.display = 'flex';
+    document.getElementById('gameScreen').style.display = 'none';
+    scores = { O: 0, X: 0, Draw: 0 };
+    updateScores();
+    resetBoard();
+  }
+
+  function play(index) {
+    if (board[index] || gameOver || botThinking) return;
+    placeSymbol(index, currentPlayer);
+    if (checkWinner() || board.every(c => c)) return;
+    currentPlayer = currentPlayer === 'O' ? 'X' : 'O';
+    updateTurnLabel();
+    if (mode === 'bot' && currentPlayer === 'X' && !gameOver) {
+      botThinking = true;
+      const delay = difficulty === 'easy' ? 300 : difficulty === 'medium' ? 500 : 700;
+      setTimeout(() => { botPlay(); botThinking = false; }, delay);
+    }
+  }
+
+  function botPlay() {
+    let move = -1;
+
+    if (difficulty === 'easy') {
+      // Easy: mostly random, rarely blocks
+      const rand = Math.random();
+      if (rand < 0.2) move = findBestMove('X');        // 20% chance to win
+      if (move === -1) {
+        const empty = board.map((v,i) => v ? -1 : i).filter(i => i !== -1);
+        move = empty[Math.floor(Math.random() * empty.length)]; // random otherwise
+      }
+
+    } else if (difficulty === 'medium') {
+      // Medium: wins if can, blocks sometimes, otherwise random
+      move = findBestMove('X');
+      if (move === -1 && Math.random() < 0.5) move = findBestMove('O'); // blocks 50% of time
+      if (move === -1) {
+        const empty = board.map((v,i) => v ? -1 : i).filter(i => i !== -1);
+        move = empty[Math.floor(Math.random() * empty.length)];
+      }
+
+    } else {
+      // Hard: perfect play using minimax
+      move = minimax(board, 'X').index;
+    }
+
+    if (move !== -1) {
+      placeSymbol(move, 'X');
+      if (!checkWinner() && !board.every(c => c)) {
+        currentPlayer = 'O';
+        updateTurnLabel();
+      }
+    }
+  }
+
+  // Minimax for unbeatable hard bot
+  function minimax(newBoard, player) {
+    const empty = newBoard.map((v,i) => v ? -1 : i).filter(i => i !== -1);
+    const winner = getWinner(newBoard);
+    if (winner === 'X') return { score: 10 };
+    if (winner === 'O') return { score: -10 };
+    if (empty.length === 0) return { score: 0 };
+
+    const moves = [];
+    for (let i of empty) {
+      const b = [...newBoard];
+      b[i] = player;
+      const result = minimax(b, player === 'X' ? 'O' : 'X');
+      moves.push({ index: i, score: result.score });
+    }
+    return player === 'X'
+      ? moves.reduce((a,b) => b.score > a.score ? b : a)
+      : moves.reduce((a,b) => b.score < a.score ? b : a);
+  }
+
+  function getWinner(b) {
+    for (let [a, bI, c] of winCombos) {
+      if (b[a] && b[a] === b[bI] && b[a] === b[c]) return b[a];
+    }
+    return null;
+  }
+
+  function findBestMove(player) {
+    for (let [a, b, c] of winCombos) {
+      const line = [board[a], board[b], board[c]];
+      const emptyIdx = [a, b, c].find(i => !board[i]);
+      if (line.filter(v => v === player).length === 2 && emptyIdx !== undefined) return emptyIdx;
+    }
+    return -1;
+  }
+
+  function placeSymbol(index, player) {
+    board[index] = player;
+    const cell = document.getElementById('board').children[index];
+    cell.classList.add('taken');
+    const sym = document.createElement('div');
+    sym.className = player === 'O' ? 'sym-o' : 'sym-x';
+    if (player === 'X') sym.textContent = '✕';
+    cell.appendChild(sym);
+    checkWinner();
+    if (!gameOver && board.every(c => c)) {
+      gameOver = true;
+      scores.Draw++;
+      updateScores();
+      document.getElementById('result').innerHTML = `<span style="color:#ffcc00">DRAW! 🤝</span>`;
+    }
+  }
+
+  function checkWinner() {
+    const winner = getWinner(board);
+    if (winner) {
+      gameOver = true;
+      scores[winner]++;
+      updateScores();
+      const cells = document.getElementById('board').children;
+      for (let [a, b, c] of winCombos) {
+        if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+          cells[a].classList.add('win');
+          cells[b].classList.add('win');
+          cells[c].classList.add('win');
+          break;
+        }
+      }
+      const label = winner === 'O'
+        ? (mode === 'bot' ? 'YOU WIN! 🎉' : 'O WINS! 🎉')
+        : (mode === 'bot' ? 'BOT WINS! 🤖' : 'X WINS! 🎉');
+      document.getElementById('result').innerHTML =
+        `<span style="color:${winner==='O'?'#00d4ff':'#ff4444'};text-shadow:0 0 10px ${winner==='O'?'#00d4ff':'#ff4444'}">${label}</span>`;
+      return true;
+    }
+    return false;
+  }
+
+  function updateTurnLabel() {
+    const label = document.getElementById('turnLabel');
+    label.textContent = mode === 'bot'
+      ? (currentPlayer === 'O' ? 'YOU (O)' : 'BOT (X)')
+      : currentPlayer;
+    label.className = currentPlayer === 'O' ? 'turn-o' : 'turn-x';
+  }
+
+  function resetBoard() {
+    board = Array(9).fill(null);
+    currentPlayer = 'O';
+    gameOver = false;
+    botThinking = false;
+    document.getElementById('result').innerHTML = '';
+    const cells = document.getElementById('board').children;
+    for (let cell of cells) { cell.innerHTML = ''; cell.classList.remove('taken', 'win'); }
+    updateTurnLabel();
+  }
+
+  function updateScores() {
+    document.getElementById('scoreO').textContent = scores.O;
+    document.getElementById('scoreX').textContent = scores.X;
+    document.getElementById('scoreDraw').textContent = scores.Draw;
+  }
+</script>
+</body>
+</html>
